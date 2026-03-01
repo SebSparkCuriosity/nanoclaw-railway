@@ -238,7 +238,12 @@ function collectMcpEnvVars(): string[] {
  * Includes env vars required by MCP servers from .mcp.json.
  */
 export function readSecrets(): Record<string, string> {
-  const coreKeys = ['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY'];
+  const coreKeys = [
+    'CLAUDE_CODE_OAUTH_TOKEN',
+    'ANTHROPIC_API_KEY',
+    'ANTHROPIC_BASE_URL',
+    'ANTHROPIC_AUTH_TOKEN',
+  ];
   const mcpEnvKeys = collectMcpEnvVars();
   const allKeys = [...coreKeys, ...mcpEnvKeys];
 
