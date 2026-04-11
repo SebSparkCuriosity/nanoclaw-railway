@@ -30,7 +30,7 @@ All five channels (Slack, Telegram, Discord, WhatsApp, Gmail) are pre-installed.
 |----------|----------|-------------|
 | `ANTHROPIC_API_KEY` | Yes | API key for Claude model access |
 | `ASSISTANT_NAME` | No | Bot display name (default: `Andy`). Also used to auto-register the main group: on first startup, the bot looks for a chat matching this name and registers it as the main group. |
-| `TZ` | No | Timezone for scheduled tasks and log timestamps (default: `UTC`) |
+| `TZ` | No | Timezone for message timestamps and scheduled tasks (default: system timezone or `UTC`) |
 | `GITHUB_TOKEN` | No | GitHub personal access token for installing skills from private repos |
 
 A Railway volume must be mounted at `/data` for persistent storage (auth state, SQLite, group files).
@@ -176,6 +176,19 @@ To remove a skill repo, delete its entry from `data/skills-lock.json` on the per
 5. `container/skills/` is synced into each group's `.claude/skills/` before every agent invocation
 6. Skill `inputs` (env vars) are parsed from SKILL.md frontmatter and forwarded to agents as secrets
 
+## Agent Capabilities
+
+Each agent invocation has access to:
+
+- **Tools:** Bash, Read, Write, Edit, Glob, Grep, WebSearch, WebFetch, Task management, MCP tools, Skills
+- **Web browsing:** Chromium is bundled in the Docker image for screenshots and page rendering
+- **Scheduled tasks:** Cron-based recurring prompts with optional pre-scripts that decide whether to wake the agent
+- **Reply context:** When replying to a message, the agent sees the quoted message content and sender
+- **Markdown formatting:** Outbound messages render with bold, code blocks, and links on Telegram/Slack
+- **Auto-compact:** Agent sessions auto-compact at 165k tokens to prevent context overflow
+- **Session cleanup:** Stale session artifacts are pruned automatically on startup and daily
+- **Per-group memory:** Each group has isolated CLAUDE.md, conversation history, and session state
+
 ## Differences from the Local (Docker) Setup
 
 The upstream [NanoClaw repository](https://github.com/qwibitai/nanoclaw) runs each agent invocation inside a Docker container, providing OS-level isolation between the host and the agent's filesystem. On Railway, Docker-in-Docker is not available, so agents run as child Node.js processes instead. Here's what changes:
@@ -183,6 +196,7 @@ The upstream [NanoClaw repository](https://github.com/qwibitai/nanoclaw) runs ea
 | Feature | Local (Docker) | Railway |
 |---------|---------------|---------|
 | Agent isolation | Each agent runs in its own container with separate filesystem | Agents run as child processes sharing the host filesystem |
+| Credential injection | OneCLI gateway intercepts HTTPS traffic | Local credential proxy on `127.0.0.1:3001` — agent gets a proxy URL, never the real API key |
 | Filesystem sandboxing | Container mounts restrict what the agent can read/write | Directory-based separation (no OS-level enforcement) |
 | Resource limits | Docker CPU/memory limits per container | Railway service-level resource limits |
 | Availability | Depends on your machine being on and connected | Always on - Railway keeps the service running 24/7 |
@@ -194,7 +208,7 @@ NanoClaw is designed as a **personal assistant** - you control who has access an
 
 - **You are the only one sending prompts** - there's no untrusted input that could exploit the lack of sandboxing
 - **The agent only writes to its group folder** - the Claude SDK's working directory is scoped to `/data/groups/{group}/`
-- **Secrets are protected** - API keys are passed via stdin and stripped from Bash subprocesses by a PreToolUse hook, same as Docker mode
+- **Secrets are protected** - Anthropic API keys are handled by a local credential proxy (the agent never sees the real key). Non-Anthropic secrets (MCP vars, channel tokens) are passed via stdin with a minimal env allowlist. All secrets are stripped from Bash subprocesses by a PreToolUse hook
 - **The real advantage is uptime** - Railway keeps your assistant available 24/7 without needing an always-on home machine
 
 If you need multi-tenant isolation or expose the bot to untrusted users, consider the local Docker setup instead.
