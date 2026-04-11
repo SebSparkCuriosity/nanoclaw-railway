@@ -59,7 +59,6 @@ vi.mock('./container-runtime.js', () => ({
   stopContainer: vi.fn(),
 }));
 
-
 // Mock OneCLI SDK
 vi.mock('@onecli-sh/sdk', () => ({
   OneCLI: class {
