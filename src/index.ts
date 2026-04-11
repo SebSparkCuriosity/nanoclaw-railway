@@ -765,8 +765,28 @@ async function main(): Promise<void> {
     await channel.connect();
   }
   if (channels.length === 0) {
-    logger.fatal('No channels connected');
-    process.exit(1);
+    logger.warn(
+      [
+        '',
+        '════════════════════════════════════════════════════════════',
+        '  NanoClaw is running but no channels are configured.',
+        '  Add at least one channel\'s env vars and restart:',
+        '',
+        '  Slack:     SLACK_BOT_TOKEN + SLACK_APP_TOKEN',
+        '  Telegram:  TELEGRAM_BOT_TOKEN',
+        '  Discord:   DISCORD_BOT_TOKEN',
+        '  WhatsApp:  WHATSAPP_PHONE',
+        '  Gmail:     GMAIL_CLIENT_ID + GMAIL_CLIENT_SECRET + GMAIL_REFRESH_TOKEN',
+        '',
+        '  Set them in Railway service config (Variables tab),',
+        '  then redeploy or restart the service.',
+        '════════════════════════════════════════════════════════════',
+        '',
+      ].join('\n'),
+    );
+    // Keep the process alive so Railway doesn't show a crash loop.
+    // The user sees the instructions in logs and adds env vars.
+    await new Promise(() => {});
   }
 
   // Auto-register main group (zero-config Railway deploy).
