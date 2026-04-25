@@ -155,6 +155,17 @@ export async function runRailwayAgent(
   const logsDir = path.join(groupDir, 'logs');
   fs.mkdirSync(logsDir, { recursive: true });
 
+  // Read non-Anthropic secrets up front so we can both forward them into the
+  // child process env (so MCP servers can resolve ${VAR} placeholders) and
+  // also pass them via stdin for backward compatibility with the legacy path.
+  // Anthropic auth is handled separately via the credential proxy.
+  const ANTHROPIC_KEYS = ['ANTHROPIC_API_KEY', 'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL'];
+  const allSecrets = readSecrets();
+  const filteredSecrets: Record<string, string> = {};
+  for (const [k, v] of Object.entries(allSecrets)) {
+    if (!ANTHROPIC_KEYS.includes(k)) filteredSecrets[k] = v;
+  }
+
   return new Promise((resolve) => {
     const child = spawn('node', [agentRunnerPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -174,6 +185,10 @@ export async function runRailwayAgent(
         RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT || '',
         ANTHROPIC_BASE_URL: 'http://127.0.0.1:' + CREDENTIAL_PROXY_PORT,
         ANTHROPIC_API_KEY: 'proxy-injected',
+        // Forward MCP / skill / channel secrets so the agent-runner can
+        // populate sdkEnv from process.env[key] and MCP servers receive
+        // resolved values for ${VAR} placeholders in .mcp.json.
+        ...filteredSecrets,
       },
     });
 
@@ -184,13 +199,7 @@ export async function runRailwayAgent(
     let stdoutTruncated = false;
     let stderrTruncated = false;
 
-    // Pass non-Anthropic secrets via stdin (Anthropic auth handled by credential proxy)
-    const allSecrets = readSecrets();
-    const ANTHROPIC_KEYS = ['ANTHROPIC_API_KEY', 'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL'];
-    const filteredSecrets: Record<string, string> = {};
-    for (const [k, v] of Object.entries(allSecrets)) {
-      if (!ANTHROPIC_KEYS.includes(k)) filteredSecrets[k] = v;
-    }
+    // Also pass secrets via stdin (legacy path; harmless when env is set above)
     input.secrets = filteredSecrets;
     (input as unknown as Record<string, unknown>).secretKeyNames = Object.keys(input.secrets);
     child.stdin.write(JSON.stringify(input));
