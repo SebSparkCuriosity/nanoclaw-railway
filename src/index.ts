@@ -607,6 +607,11 @@ function recoverPendingMessages(): void {
 }
 
 function ensureContainerSystemRunning(): void {
+  // On Railway, agents run as child Node processes (see runRailwayAgent).
+  // Docker is not available in Railway's runtime, so skip the check.
+  if (IS_RAILWAY) {
+    return;
+  }
   ensureContainerRuntimeRunning();
   cleanupOrphans();
 }
