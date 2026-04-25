@@ -539,6 +539,22 @@ async function runQuery(
             NANOCLAW_CHAT_JID: containerInput.chatJid,
             NANOCLAW_GROUP_FOLDER: containerInput.groupFolder,
             NANOCLAW_IS_MAIN: containerInput.isMain ? '1' : '0',
+            // Forward IPC + workspace paths so the inner MCP doesn't fall
+            // back to /workspace/ipc (which doesn't exist on Railway, where
+            // there's no Docker mount). Without these, schedule_task and
+            // manage_mcp_servers fail with EACCES on mkdir.
+            NANOCLAW_IPC_DIR: process.env.NANOCLAW_IPC_DIR || '',
+            NANOCLAW_IPC_INPUT: process.env.NANOCLAW_IPC_INPUT || '',
+            NANOCLAW_WORKSPACE_GROUP: process.env.NANOCLAW_WORKSPACE_GROUP || '',
+            NANOCLAW_WORKSPACE_GLOBAL:
+              process.env.NANOCLAW_WORKSPACE_GLOBAL || '',
+            // Forward deployment marker so the inner MCP renders the right
+            // "set credentials in Railway dashboard vs. set_env_var" branch
+            // in tool descriptions.
+            RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT || '',
+            // Cosmetic but cheap — keeps timestamps consistent with host TZ.
+            TZ: process.env.TZ || '',
+            PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
           },
         },
         ...extraMcpServers,
