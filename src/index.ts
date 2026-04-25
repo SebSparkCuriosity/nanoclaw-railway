@@ -15,6 +15,7 @@ import {
   ONECLI_URL,
   POLL_INTERVAL,
   SLACK_MAIN_CHANNEL_ID,
+  TELEGRAM_MAIN_CHAT_ID,
   TIMEZONE,
 } from './config.js';
 import './channels/index.js';
@@ -816,6 +817,18 @@ async function main(): Promise<void> {
       );
     }
 
+    // Priority 1b: TELEGRAM_MAIN_CHAT_ID — directly register a Telegram chat as main.
+    // Accepts either `tg:123456789` (from the bot's /chatid command) or just `123456789`.
+    if (!mainJid && TELEGRAM_MAIN_CHAT_ID) {
+      const raw = TELEGRAM_MAIN_CHAT_ID.trim();
+      mainJid = raw.startsWith('tg:') ? raw : `tg:${raw}`;
+      mainName = ASSISTANT_NAME;
+      logger.info(
+        { chatId: TELEGRAM_MAIN_CHAT_ID },
+        'Using TELEGRAM_MAIN_CHAT_ID for main group',
+      );
+    }
+
     // Priority 2: Match ASSISTANT_NAME against chat names
     if (!mainJid) {
       const allChats = getAllChats();
@@ -832,7 +845,7 @@ async function main(): Promise<void> {
           .slice(0, 20);
         logger.warn(
           { assistantName: ASSISTANT_NAME, availableChats: chatNames },
-          'No group matching ASSISTANT_NAME found. Set SLACK_MAIN_CHANNEL_ID, or create a group named after your bot, send a message, then restart.',
+          'No group matching ASSISTANT_NAME found. Set SLACK_MAIN_CHANNEL_ID or TELEGRAM_MAIN_CHAT_ID, or create a group named after your bot, send a message, then restart.',
         );
       }
     }
