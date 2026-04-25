@@ -12,6 +12,7 @@ const envConfig = readEnvFile([
   'ASSISTANT_NAME',
   'ASSISTANT_HAS_OWN_NUMBER',
   'SLACK_MAIN_CHANNEL_ID',
+  'TELEGRAM_MAIN_CHAT_ID',
   'ONECLI_URL',
   'TZ',
 ]);
@@ -35,6 +36,8 @@ export const MAIN_GROUP_FOLDER = 'main';
 export const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || '';
 export const SLACK_MAIN_CHANNEL_ID =
   process.env.SLACK_MAIN_CHANNEL_ID || envConfig.SLACK_MAIN_CHANNEL_ID || '';
+export const TELEGRAM_MAIN_CHAT_ID =
+  process.env.TELEGRAM_MAIN_CHAT_ID || envConfig.TELEGRAM_MAIN_CHAT_ID || '';
 
 // Mount security: allowlist stored OUTSIDE project root, never mounted into containers
 export const MOUNT_ALLOWLIST_PATH = path.join(
